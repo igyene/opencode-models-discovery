@@ -219,8 +219,25 @@ function getModelInfo(modelInfoById: Map<string, LiteLLMModelInfoEntry>, modelId
 export function createLiteLLMEnricher(
   data: unknown,
 ): ModelEnricher {
-  const response = data as { data?: LiteLLMModelInfoEntry[] } | undefined
-  const modelInfoById = buildModelInfoMap(Array.isArray(response?.data) ? response.data : [])
+  let entries: LiteLLMModelInfoEntry[] = []
+  
+  if (typeof data === 'object' && data !== null) {
+    // Case 1: Response wrapped in { data: [...] }
+    const response = data as { data?: LiteLLMModelInfoEntry[] }
+    if (Array.isArray(response.data)) {
+      entries = response.data
+    }
+    // Case 2: Raw array directly passed
+    else if (Array.isArray(data as any)) {
+      entries = data as LiteLLMModelInfoEntry[]
+    }
+    // Case 3: Single object with model_name field
+    else if ('model_name' in data) {
+      entries = [data as LiteLLMModelInfoEntry]
+    }
+  }
+  
+  const modelInfoById = buildModelInfoMap(entries)
 
   return {
     enrich(model, context) {
